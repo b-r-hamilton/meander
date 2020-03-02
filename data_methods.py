@@ -8,6 +8,19 @@ import pandas as pd
 import pickle 
 import numpy as np 
 import time 
+from scipy import stats
+import matplotlib.pyplot as plt 
+
+
+#remove untitled columns - these are just additional indices 
+def drop_untitled(df):
+    col = df.columns.tolist()
+    sublist = []
+    for i in col: 
+        if i[:7] == 'Unnamed':
+            sublist.append(i)
+    df = df.drop(columns = sublist)
+    return df 
 
 #find the closest value to some specified value in an array 
 def find_closest_val(val, arr):
@@ -42,13 +55,10 @@ def compress_ra(ra_path, write_to):
     
     print("--- %s seconds ---" % (time.time() - start_time))
     
-    
+
 #takes original Frasson file and adds a mean/min/max discharge column 
     #based on nearest neighbor approach (not as-the-crow-flies)
 def assign_cop_to_latlon(sin_path, dis_path):
-    # sin_path = r'D:\MS Sinuosity Data\MS_segments_recovered.xlsx'
-    # dis_path = r'D:\CDS River Discharge\Pickles\compressed_ra.pickle'
-    
     
     start_time = time.time() #start a timer 
 
@@ -59,10 +69,18 @@ def assign_cop_to_latlon(sin_path, dis_path):
     lat = dic['lat'].tolist()
     lon = dic['lon'].tolist()
     
+    swing = np.round(np.mean(df['Meandwave']) / 1000 / 11, 1) # average meander wavelength, in km / 11 km (11km = 0.1 deg, res of dataset)
+    if 0.01 < swing < 0.49: 
+        swing = 1
+    swing = int(swing)
+
     #initialize lists 
     means = []
     maxs = []
     mins = []
+    
+    ma = dic['mean_annual']
+    ma[np.isnan(ma)] = 0
     
     #iterate through dataframe from Frasson file and find the closest neighbor within GFAS 
     for ind in df.index:
@@ -75,6 +93,20 @@ def assign_cop_to_latlon(sin_path, dis_path):
         ind_x = find_closest_val(x, lat)
         ind_y = find_closest_val(y, lon)
         
+        if swing != 0:
+            #search for index of largest value within 2swing x 2swing box of closest lat/lon pair
+            #rem python indexing = [inclusive:exclusive]
+            array = ma[ind_x - swing:ind_x + swing + 1, ind_y - swing:ind_y + swing + 1]
+        
+
+            #find index of max 
+            (ind_x_sub, ind_y_sub) = np.unravel_index(array.argmax(), array.shape)
+        else:
+            (ind_x_sub, ind_y_sub) = (0,0)
+        #relate sub-array max indices back to indices in larger array 
+        ind_x = ind_x + ind_x_sub - swing
+        ind_y = ind_y + ind_y_sub - swing   
+    
         #get mean, max, min from the GFAS file 
         means.append(dic['mean_annual'][ind_x, ind_y])
         maxs.append(dic['peak_annual'][ind_x, ind_y])
@@ -89,19 +121,22 @@ def assign_cop_to_latlon(sin_path, dis_path):
     #temporally convert -9999 values to nan, so that they can be processed by np.log
     df[df == -9999.0 ] = np.nan
     
+    columns = df.columns.tolist()
+    
     #add log columns to dataframe 
-    df['log_sinuosity'] = np.log(df['Sinuosity'])
+    if 'Sinuosity' in columns: df['log_sinuosity'] = np.log(df['Sinuosity'])
     df['log_mw'] = np.log(df['Meandwave'])
     df['log_mean_dis'] = np.log(df['mean_dis'])
     df['log_min_dis'] = np.log(df['min_dis'])
     df['log_max_dis'] = np.log(df['max_dis'])
-    df['log_QWBM'] = np.log(df['QWBM'])
+    if 'QWBM' in columns: df['log_QWBM'] = np.log(df['QWBM'])
     
     #convert nan values back to -9999.0, so this file can be easily shared to non-Python friends 
     df.fillna(-9999.0)
     
     print('rewriting excel file with 9 new columns...')
     #rewrite excel file 
+    df = drop_untitled(df)
     df.to_excel(sin_path)
     
     #print time 
@@ -127,6 +162,7 @@ def segment_frasson(original_frasson, output_file):
     
     df_new['vals_in_seg'] = lengths
     df_new = df_new.drop(df_new.columns[:4], axis=1) #scummy fix 
+    df_new = drop_untitled(df_new)
     df_new.to_excel(output_file)
     
 def perform_correlations(x_vals, y_vals, df):
@@ -148,3 +184,20 @@ def perform_correlations(x_vals, y_vals, df):
     df = pd.DataFrame(correlations, columns = y_vals, index = x_vals)
     print('Correlation Matrix')
     print(df)
+    
+def lin_reg(x, y, desc):
+    x = np.asarray(x)
+    y = np.asarray(y)
+    slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+    y_theo = intercept + slope * x
+    print(desc)
+    print('_______________')
+
+    print("R^2 = " +str(r_value*r_value))
+    print("P = " +str(p_value))
+    print("Standard Error = " +str(std_err))
+    print(' ')
+    print('slope = ' +str(slope))
+    print('intercept = ' +str(intercept))
+    print(' ')
+    return y_theo 

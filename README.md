@@ -14,6 +14,8 @@ Packages are collections of methods that I expect to use repeatedly. These can't
 ## Notebooks 
 Jupyter notebooks are scripts with formatted text and figures included. 
 - example_notebook.ipynb : A notebook showing how to generate and perform basic analytics and visualizations on the MS_segments_averaged.xlsx file. 
+- Analysis on River Segments.ipynb : A notebook relating hand-measured meander wavelengths (by Char/Brynn) and discharges calculated from GLOFAS 
+- fix_nn.ipynb : A notebook comparing simple, old nearest-neighbors method with new, grid-search nearest neighbors method 
 
 ## Dependencies 
 - numpy
@@ -22,3 +24,6 @@ Jupyter notebooks are scripts with formatted text and figures included.
 - matplotlib 
 - scikit-learn 
 - scipy
+
+- pickle 
+- time 
