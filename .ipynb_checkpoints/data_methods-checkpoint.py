@@ -77,7 +77,7 @@ def assign_cop_to_latlon(sin_path, dis_path):
     swing = np.round(np.mean(df['Meandwave']) / 1000 / 11, 1) # average meander wavelength, in km / 11 km (11km = 0.1 deg, res of dataset)
     if 0.01 < swing < 0.49: 
         swing = 1
-    swing = int(swing)
+    swing = int(swing + 1)
 
     #initialize lists 
     means = []

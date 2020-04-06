@@ -67,6 +67,8 @@ def get_month_indices(datetimes, given_indexes, spec_month):
     for i in given_indexes:
         if datetimes[i].month == spec_month:
             indices.append(i)
+            
+            
     return indices 
 
 directory = r'D:\CDS River Discharge\Data'
@@ -92,7 +94,6 @@ for i in bbox:
 
 lat = lat[bbox[0][0]:bbox[0][1]]
 lon = lon[bbox[1][0]:bbox[1][1]]
-
 #initialize overall mean/peak/min arrays 
 mean_annual = np.empty((len(available_years), len(lat), len(lon)))
 peak_annual = np.empty((len(available_years), len(lat), len(lon)))
