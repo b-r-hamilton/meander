@@ -43,15 +43,17 @@ def compress_ra(ra_path, write_to):
     lon = dictionary['lon']
     year = dictionary['year']
     
-    spa = np.sort(peak_annual, axis = 0)
+    pa_temp = peak_annual[2:, :, :] #get rid of first year 
+    spa = np.sort(pa_temp, axis = 0)
+    
     
     #overwrite dictionary, average temporally 
     dictionary = {'mean_annual' : np.mean(mean_annual, axis = 0),
                   'peak_annual' : np.mean(peak_annual, axis = 0),
                   'min_annual' : np.mean(min_annual, axis = 0),
-                  'rec2' : spa[20],
-                  'rec10.5' : spa[37],
-                  'rec21' : spa[39],
+                  'rec2' : spa[19],
+                  'rec10' : spa[35],
+                  'rec20' : spa[37],
                   'year' : year,
                   'lat' : lat,
                   'lon' : lon}
@@ -70,22 +72,21 @@ def assign_cop_to_latlon(sin_path, dis_path):
     #import data , get lat, lon 
     df = pd.read_excel(sin_path)
     dic = pickle.load(open(dis_path, "rb" ) )
-    
     lat = dic['lat'].tolist()
     lon = dic['lon'].tolist()
     
     swing = np.round(np.mean(df['Meandwave']) / 1000 / 11, 1) # average meander wavelength, in km / 11 km (11km = 0.1 deg, res of dataset)
     if 0.01 < swing < 0.49: 
         swing = 1
-    swing = int(swing + 1)
+    swing = int(swing)
 
     #initialize lists 
     means = []
     maxs = []
     mins = []
     rec2 = []
-    rec105 = []
-    rec21 = []
+    rec10 = []
+    rec20 = []
     
     ma = dic['mean_annual']
     ma[np.isnan(ma)] = 0
@@ -120,8 +121,8 @@ def assign_cop_to_latlon(sin_path, dis_path):
         maxs.append(dic['peak_annual'][ind_x, ind_y])
         mins.append(dic['min_annual'][ind_x, ind_y])
         rec2.append(dic['rec2'][ind_x, ind_y])
-        rec105.append(dic['rec10.5'][ind_x, ind_y])
-        rec21.append(dic['rec21'][ind_x, ind_y])
+        rec10.append(dic['rec10'][ind_x, ind_y])
+        rec20.append(dic['rec20'][ind_x, ind_y])
         
     
     print('writing new columns to dataframe...')
@@ -130,8 +131,8 @@ def assign_cop_to_latlon(sin_path, dis_path):
     df['min_dis'] = mins
     df['max_dis'] = maxs 
     df['rec2'] = rec2
-    df['rec10.5'] = rec105
-    df['rec21'] = rec21
+    df['rec10'] = rec10
+    df['rec20'] = rec20
     
     #temporally convert -9999 values to nan, so that they can be processed by np.log
     df[df == -9999.0 ] = np.nan
